@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Relatórios Clínicos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;
+  --bg2:#0d0d18;
+  --card:#111120;
+  --card2:#16162a;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --accent:#8b5cf6;
+  --accent2:#7c3aed;
+  --accent-glow:rgba(139,92,246,0.25);
+  --green:#34d399;
+  --green-glow:rgba(52,211,153,0.2);
+  --red:#f87171;
+  --red-glow:rgba(248,113,113,0.2);
+  --text:#f1f5f9;
+  --text2:#94a3b8;
+  --text3:#64748b;
+  --radius:18px;
+  --radius-sm:10px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 0%,rgba(139,92,246,0.08) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 90%,rgba(52,211,153,0.05) 0%,transparent 70%);
+  pointer-events:none;
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* HEADER */
+header{padding:32px 0 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),#6d28d9);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  box-shadow:0 0 20px var(--accent-glow);
+}
+.logo h1{font-size:17px;font-weight:700;letter-spacing:-0.02em}
+.logo p{font-size:11px;color:var(--text3);margin-top:1px}
+.btn-clear{
+  display:flex;align-items:center;gap:7px;padding:8px 16px;
+  border-radius:50px;border:1px solid var(--border2);
+  background:rgba(248,113,113,0.06);color:var(--red);
+  font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.32,0.72,0,1);
+  letter-spacing:0.02em;
+}
+.btn-clear:hover{background:rgba(248,113,113,0.14);border-color:rgba(248,113,113,0.4);transform:translateY(-1px)}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:4px 0 28px}
+
+/* CARD SHELL (double bezel) */
+.shell{
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);
+  border-radius:calc(var(--radius) + 4px);
+  padding:3px;
+  margin-bottom:16px;
+}
+.core{
+  background:var(--card);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  padding:24px;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.06);
+}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:680px){.grid2{grid-template-columns:1fr}}
+
+/* SECTION LABEL */
+.sec-label{
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.15em;color:var(--text3);margin-bottom:14px;
+}
+.sec-label span{
+  display:inline-block;width:20px;height:20px;border-radius:6px;
+  background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--accent);
+}
+
+/* INPUTS */
+textarea,input[type=text],input[type=date]{
+  width:100%;background:rgba(255,255,255,0.03);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:inherit;font-size:13px;
+  padding:11px 14px;resize:vertical;outline:none;
+  transition:border-color 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+textarea:focus,input:focus{border-color:rgba(139,92,246,0.5);background:rgba(139,92,246,0.04)}
+textarea::placeholder,input::placeholder{color:var(--text3)}
+
+/* UPLOAD ZONE */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:var(--radius-sm);
+  padding:28px 20px;text-align:center;cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.32,0.72,0,1);
+  background:rgba(255,255,255,0.01);
+  position:relative;
+}
+.upload-zone:hover,.upload-zone.drag{
+  border-color:rgba(139,92,246,0.5);
+  background:rgba(139,92,246,0.04);
+}
+.upload-zone.loaded{border-color:rgba(52,211,153,0.5);background:rgba(52,211,153,0.04)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.upload-icon{font-size:28px;margin-bottom:8px;opacity:0.6}
+.upload-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--text3)}
+.upload-loaded{font-size:12px;color:var(--green);font-weight:600}
+
+/* AVULSO CARD */
+.avulso-card{
+  background:rgba(255,255,255,0.02);
+  border:1px solid rgba(139,92,246,0.2);
+  border-radius:calc(var(--radius) + 4px);
+  padding:3px;
+  margin-bottom:24px;
+}
+.avulso-inner{
+  background:var(--card);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  padding:20px 24px;
+}
+.avulso-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none;
+}
+.avulso-toggle-label{
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.12em;color:var(--accent);
+}
+.avulso-toggle-icon{font-size:18px;transition:transform 0.3s}
+.avulso-toggle-icon.open{transform:rotate(180deg)}
+.avulso-body{display:none;margin-top:16px}
+.avulso-body.open{display:block}
+.avulso-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:680px){.avulso-grid{grid-template-columns:1fr}}
+.avulso-label{display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase}
+.btn-avulso{
+  width:100%;padding:12px 20px;border-radius:50px;
+  background:linear-gradient(135deg,rgba(139,92,246,0.25),rgba(109,40,217,0.25));
+  border:1px solid rgba(139,92,246,0.4);
+  color:var(--accent);font-family:inherit;
+  font-size:13px;font-weight:700;cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.32,0.72,0,1);
+  letter-spacing:0.04em;
+}
+.btn-avulso:hover{background:linear-gradient(135deg,rgba(139,92,246,0.4),rgba(109,40,217,0.4));transform:translateY(-1px)}
+
+/* CONFIG ROW */
+.config-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:680px){.config-row{grid-template-columns:1fr}}
+.config-item label{display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase}
+
+/* GENERATE BUTTON */
+.btn-gen{
+  width:100%;padding:16px 24px;border-radius:50px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;color:#fff;font-family:inherit;
+  font-size:15px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 0 30px var(--accent-glow),0 4px 20px rgba(0,0,0,0.4);
+  transition:all 0.4s cubic-bezier(0.32,0.72,0,1);
+  letter-spacing:0.01em;margin-bottom:24px;
+}
+.btn-gen:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 40px var(--accent-glow),0 8px 30px rgba(0,0,0,0.5)}
+.btn-gen:active:not(:disabled){transform:scale(0.98)}
+.btn-gen:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.btn-gen .arrow{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);
+}
+.btn-gen:hover:not(:disabled) .arrow{transform:translateX(4px)}
+
+/* PROGRESS */
+#progressSection{display:none;margin-bottom:24px}
+.progress-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;
+}
+.prog-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.prog-title{font-size:13px;font-weight:700}
+.prog-count{font-size:12px;color:var(--text3)}
+.progress-bar-wrap{
+  height:6px;background:rgba(255,255,255,0.05);
+  border-radius:50px;overflow:hidden;margin-bottom:12px;
+}
+.progress-bar{
+  height:100%;border-radius:50px;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  transition:width 0.5s cubic-bezier(0.32,0.72,0,1);
+  width:0%;
+}
+.prog-status{font-size:12px;color:var(--text3);min-height:18px}
+
+/* GAUGE */
+.gauge-row{display:flex;align-items:center;gap:20px}
+.gauge-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
+.gauge-wrap svg{transform:rotate(-90deg)}
+.gauge-center{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:var(--accent);
+}
+.gauge-info{flex:1}
+.gauge-info h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.gauge-info p{font-size:12px;color:var(--text2)}
+
+/* RESULTS */
+#resultsSection{display:none;margin-bottom:32px}
+.result-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 16px;border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.02);border:1px solid var(--border);
+  margin-bottom:8px;
+  animation:fadeUp 0.4s cubic-bezier(0.32,0.72,0,1) both;
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.result-badge{
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.result-badge.ok{background:var(--green-glow);border:1px solid rgba(52,211,153,0.3)}
+.result-badge.err{background:var(--red-glow);border:1px solid rgba(248,113,113,0.3)}
+.result-name{font-size:13px;font-weight:600;flex:1}
+.result-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.result-tag{
+  font-size:10px;padding:3px 8px;border-radius:50px;font-weight:600;
+  white-space:nowrap;
+}
+.result-tag.ok{background:var(--green-glow);color:var(--green);border:1px solid rgba(52,211,153,0.3)}
+.result-tag.err{background:var(--red-glow);color:var(--red);border:1px solid rgba(248,113,113,0.3)}
+
+/* DOWNLOAD BUTTON */
+.btn-download{
+  width:100%;padding:14px 24px;border-radius:50px;
+  background:rgba(52,211,153,0.1);
+  border:1px solid rgba(52,211,153,0.3);
+  color:var(--green);font-family:inherit;
+  font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:all 0.4s cubic-bezier(0.32,0.72,0,1);
+  margin-top:16px;
+}
+.btn-download:hover{background:rgba(52,211,153,0.18);transform:translateY(-1px)}
+.btn-download:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:12px 18px;
+  font-size:13px;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  transform:translateY(80px);opacity:0;
+  transition:all 0.4s cubic-bezier(0.32,0.72,0,1);
+  max-width:320px;
+}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:rgba(52,211,153,0.4);color:var(--green)}
+#toast.err{border-color:rgba(248,113,113,0.4);color:var(--red)}
+
+/* FOOTER */
+footer{padding:24px 0;text-align:center;font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <div>
+        <h1>Gerador de Relatórios Clínicos</h1>
+        <p>Fisioterapia · Laudos para Operadoras de Saúde</p>
+      </div>
+    </div>
+    <button class="btn-clear" onclick="clearAll()">
+      <span>🗑</span> Limpar Tudo
+    </button>
+  </header>
+  <div class="divider"></div>
+
+  <!-- ROW 1: NAMES + EXCEL -->
+  <div class="grid2">
+    <!-- NAMES -->
+    <div class="shell">
+      <div class="core">
+        <div class="sec-label"><span>1</span> Lista de Pacientes</div>
+        <textarea id="namesArea" rows="7"
+          placeholder="Cole os nomes aqui (um por linha):&#10;&#10;João da Silva&#10;Maria Souza&#10;..."></textarea>
+        <div style="margin-top:10px">
+          <div class="upload-zone" id="namesZone" style="padding:16px">
+            <input type="file" accept=".txt" onchange="loadNamesFile(this)" title="Carregar .txt">
+            <span style="font-size:13px;color:var(--text3)">ou arraste um <strong>.txt</strong> com os nomes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXCEL -->
+    <div class="shell">
+      <div class="core">
+        <div class="sec-label"><span>2</span> Base de Avaliações (Excel)</div>
+        <div class="upload-zone" id="excelZone" style="height:100%;min-height:140px"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="dropExcel(event)">
+          <input type="file" accept=".xlsx,.xls" id="excelInput" onchange="loadExcel(this)" title="Carregar Excel">
+          <div class="upload-icon">📊</div>
+          <div class="upload-title" id="excelTitle">Clique ou arraste o arquivo</div>
+          <div class="upload-sub" id="excelSub">Fichas de Avaliação .xlsx</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- GENERATE BTN -->
+  <button class="btn-gen" id="btnGen" onclick="generateReports()">
+    <span>Gerar Relatórios</span>
+    <div class="arrow">→</div>
+  </button>
+
+  <!-- AVULSO -->
+  <div class="avulso-card">
+    <div class="avulso-inner">
+      <div class="avulso-toggle" onclick="toggleAvulso()">
+        <div class="avulso-toggle-label">
+          <span>✦</span> Relatório Avulso — sem planilha
+        </div>
+        <span class="avulso-toggle-icon" id="avulsoIcon">▾</span>
+      </div>
+      <div class="avulso-body" id="avulsoBody">
+        <div class="avulso-grid">
+          <div>
+            <label class="avulso-label">Nome do Paciente</label>
+            <input type="text" id="avulsoNome" placeholder="Ex: Daniel Lopes Marques de Souza">
+          </div>
+          <div>
+            <label class="avulso-label">Patologia / Queixa</label>
+            <input type="text" id="avulsoPatologia" placeholder="Ex: Dor em punho direito">
+          </div>
+        </div>
+        <button class="btn-avulso" onclick="gerarAvulso()">Gerar Relatório Avulso →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progressSection">
+    <div class="progress-card">
+      <div class="gauge-row">
+        <div class="gauge-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="gaugePath" cx="40" cy="40" r="32" fill="none"
+              stroke="url(#gGrad)" stroke-width="8"
+              stroke-linecap="round"
+              stroke-dasharray="201.06" stroke-dashoffset="201.06"
+              style="transition:stroke-dashoffset 0.6s cubic-bezier(0.32,0.72,0,1)"/>
+            <defs>
+              <linearGradient id="gGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#34d399"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="gauge-center" id="gaugeNum">0%</div>
+        </div>
+        <div class="gauge-info">
+          <h3 id="progTitle">Processando relatórios...</h3>
+          <p id="progStatus">Aguardando...</p>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="prog-count" id="progCount"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsSection">
+    <div class="shell">
+      <div class="core">
+        <div class="sec-label"><span>✓</span> Resultado</div>
+        <div id="resultsList"></div>
+        <button class="btn-download" id="btnDownload" onclick="downloadZip()" disabled>
+          <span>⬇</span> Baixar Todos os Relatórios (.zip)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Ferramenta interna · Relatórios Fisioterapêuticos para Operadoras de Saúde</footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ========== STATE ==========
+let excelDB = {}; // {normalizedName: {questions: {q: answer}, rawName, date}}
+let generatedZip = null;
+let generatedFiles = [];
+
+// ========== INIT ==========
+// Date is always generated at runtime — no user input needed
+
+// ========== UTILS ==========
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', 3200);
+}
+
+function xmlEsc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+function normName(s) {
+  return String(s||'').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^A-Z0-9 ]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+function fmtDate(d) {
+  if (!d) return new Date().toLocaleDateString('pt-BR');
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ========== NAME MATCHING ==========
+function tokenSim(a, b) {
+  a = normName(a); b = normName(b);
+  if (a === b) return 1.0;
+  const at = a.split(' ').filter(t => t.length > 2);
+  const bt = b.split(' ').filter(t => t.length > 2);
+  if (!at.length || !bt.length) return 0;
+  let hits = 0;
+  for (const t of at) {
+    if (bt.includes(t)) hits++;
+    else {
+      // partial: check if any bt token starts with or contains this token
+      for (const u of bt) {
+        if (u.startsWith(t) || t.startsWith(u)) { hits += 0.7; break; }
+      }
+    }
+  }
+  return (2 * hits) / (at.length + bt.length);
+}
+
+function findBestMatch(inputName) {
+  const keys = Object.keys(excelDB);
+  let best = null, bestScore = 0;
+  for (const k of keys) {
+    const s = tokenSim(inputName, k);
+    if (s > bestScore) { bestScore = s; best = k; }
+  }
+  if (bestScore >= 0.55) return { key: best, score: bestScore, data: excelDB[best] };
+  return null;
+}
+
+// ========== EXCEL LOADING ==========
+function loadExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  parseExcelFile(file);
+}
+
+function dropExcel(e) {
+  e.preventDefault();
+  document.getElementById('excelZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) parseExcelFile(file);
+}
+
+function parseExcelFile(file) {
+  const zone = document.getElementById('excelZone');
+  zone.classList.remove('loaded');
+  document.getElementById('excelTitle').textContent = 'Carregando...';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type:'array', cellDates:true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+
+      excelDB = {};
+      let count = 0;
+
+      // Group by name + ficha_code, keep most recent
+      const byNameFicha = {};
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const nome = String(r[1]||'').trim();
+        const ficha = r[5];
+        const dataFicha = r[4] ? new Date(r[4]) : new Date(0);
+        const pergunta = String(r[6]||'').trim();
+        const resposta = String(r[7]||'').trim();
+        if (!nome || !pergunta || !resposta) continue;
+        const key = nome + '||' + ficha;
+        if (!byNameFicha[key]) byNameFicha[key] = { nome, ficha, date: dataFicha, questions: {} };
+        else if (dataFicha > byNameFicha[key].date) byNameFicha[key].date = dataFicha;
+        byNameFicha[key].questions[pergunta] = resposta;
+      }
+
+      // For each patient, keep most recent ficha
+      const byName = {};
+      for (const entry of Object.values(byNameFicha)) {
+        const n = entry.nome;
+        if (!byName[n] || entry.date > byName[n].date) byName[n] = entry;
+      }
+
+      for (const [nome, entry] of Object.entries(byName)) {
+        const nk = normName(nome);
+        excelDB[nk] = { rawName: nome, questions: entry.questions, date: entry.date };
+        count++;
+      }
+
+      zone.classList.add('loaded');
+      document.getElementById('excelTitle').textContent = `✓ ${file.name}`;
+      document.getElementById('excelSub').textContent = `${count.toLocaleString()} pacientes carregados`;
+      toast(`Base carregada: ${count} pacientes`, 'ok');
+    } catch(err) {
+      document.getElementById('excelTitle').textContent = 'Erro ao carregar';
+      document.getElementById('excelSub').textContent = err.message;
+      toast('Erro ao ler Excel: ' + err.message, 'err');
+    }
+  };
+  reader.onerror = () => toast('Erro ao ler arquivo', 'err');
+  reader.readAsArrayBuffer(file);
+}
+
+function loadNamesFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const names = e.target.result.split('\n').map(n => n.trim()).filter(Boolean);
+    const ta = document.getElementById('namesArea');
+    ta.value = (ta.value ? ta.value + '\n' : '') + names.join('\n');
+    toast(`${names.length} nomes adicionados`, 'ok');
+  };
+  reader.readAsText(file);
+}
+
+// ========== CLEAR ==========
+function clearAll() {
+  document.getElementById('namesArea').value = '';
+  document.getElementById('excelInput').value = '';
+  document.getElementById('profName').value = '';
+  document.getElementById('profCrefito').value = '';
+  document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+  excelDB = {}; generatedZip = null; generatedFiles = [];
+  const zone = document.getElementById('excelZone');
+  zone.classList.remove('loaded');
+  document.getElementById('excelTitle').textContent = 'Clique ou arraste o arquivo';
+  document.getElementById('excelSub').textContent = 'Fichas de Avaliação .xlsx';
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('btnDownload').disabled = true;
+  toast('Memória limpa ✓', 'ok');
+}
+
+// ========== CONTENT GENERATION ==========
+const BODY_AREAS = [
+  { keys:['capsulite','frozen shoulder','rigidez ombro'], area:'ombro', side:'ombro' },
+  { keys:['manguito rotador','tendinite ombro','busite subacromial','busite subdeltoidea','ombro doloroso','síndrome do ombro','sindrome do ombro','sindrome ombro'], area:'ombro', side:'ombro' },
+  { keys:['ombro','shoulder'], area:'ombro', side:'ombro' },
+  { keys:['menisco','ligamento cruzado','condropatia joelho','gonartrose','artrose joelho','joelho'], area:'joelho', side:'joelho' },
+  { keys:['lombalgia','hérnia discal','hernia discal','hérnia de disco','hernia de disco','espondiloartrose','lombociatalgia','coluna lombar','lombar'], area:'coluna_lombar', side:'coluna lombar' },
+  { keys:['cervicalgia','hérnia cervical','hernia cervical','coluna cervical','cervical'], area:'coluna_cervical', side:'coluna cervical' },
+  { keys:['coluna'], area:'coluna_lombar', side:'coluna' },
+  { keys:['neuroma de morton','morton','tendinite tornozelo','fascite plantar','esporão','tenossinovite','tornozelo','pé','antepé'], area:'pe_tornozelo', side:'pé e tornozelo' },
+  { keys:['túnel do carpo','tunel do carpo','síndrome do túnel','sindrome do tunel','punho','carpo'], area:'punho_mao', side:'punho e mão' },
+  { keys:['mão','dedos'], area:'punho_mao', side:'mão' },
+  { keys:['epicondilite','epicondilalgia','cotovelo'], area:'cotovelo', side:'cotovelo' },
+  { keys:['quadril','coxofemoral','coxartrose','artrose quadril'], area:'quadril', side:'quadril' },
+  { keys:['miastenia','neuromuscular','poliartr'], area:'geral', side:'membros inferiores' },
+];
+
+const CID_MAP = [
+  { keys:['capsulite adesiva','capsulite'], cid:'M75.0' },
+  { keys:['manguito rotador','ruptura manguito'], cid:'M75.1' },
+  { keys:['busite subacromial','busite subdeltoidea','busite ombro'], cid:'M75.5' },
+  { keys:['ombro doloroso','síndrome do ombro'], cid:'M75.1' },
+  { keys:['lombalgia crônica','lombalgia cronica','lombalgia'], cid:'M54.5' },
+  { keys:['lombociatalgia'], cid:'M54.4' },
+  { keys:['hérnia disc','hernia disc'], cid:'M51.1' },
+  { keys:['espondiloartrose','artrose coluna'], cid:'M47.8' },
+  { keys:['cervicalgia'], cid:'M54.2' },
+  { keys:['tendinite','tendinit'], cid:'M77.9' },
+  { keys:['neuroma de morton','morton'], cid:'G57.6' },
+  { keys:['túnel do carpo','tunel do carpo'], cid:'G54.2' },
+  { keys:['artrose joelho','gonartrose'], cid:'M17.1' },
+  { keys:['artrose','osteoartrite'], cid:'M19.9' },
+  { keys:['menisco lateral'], cid:'M23.2' },
+  { keys:['menisco medial'], cid:'M23.2' },
+  { keys:['menisco'], cid:'M23.2' },
+  { keys:['fascite plantar'], cid:'M72.2' },
+  { keys:['epicondilite lateral','cotovelo de tênis'], cid:'M77.1' },
+  { keys:['epicondilite medial'], cid:'M77.0' },
+  { keys:['epicondilite'], cid:'M77.1' },
+  { keys:['coxartrose','artrose quadril'], cid:'M16.1' },
+  { keys:['fibromialgia'], cid:'M79.7' },
+  { keys:['miastenia'], cid:'G70.0' },
+  { keys:['síndrome dolorosa','sindrome dolorosa'], cid:'M79.6' },
+];
+
+function detectBodyArea(text) {
+  const t = (text||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for (const ba of BODY_AREAS) {
+    for (const k of ba.keys) {
+      const kn = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if (t.includes(kn)) return ba;
+    }
+  }
+  return { area:'geral', side:'segmento tratado' };
+}
+
+function detectCID(text) {
+  const t = (text||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  for (const cm of CID_MAP) {
+    for (const k of cm.keys) {
+      const kn = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if (t.includes(kn)) return cm.cid;
+    }
+  }
+  return null;
+}
+
+function detectSide(text) {
+  const t = (text||'').toLowerCase();
+  if (t.includes('bilateral')) return 'Bilateral';
+  if (t.includes('esquerdo') || t.includes('esquerda')) return 'Esquerdo';
+  if (t.includes('direito') || t.includes('direita')) return 'Direito';
+  return '';
+}
+
+function titleCase(s) {
+  return s.split(' ').map(w => w.length > 3 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()).join(' ');
+}
+
+function normalizePatologiaText(t) {
+  if (!t) return '';
+  // Remove leading dashes, trim lines, join with space if short
+  return t.split('\n').map(l => l.replace(/^[-–\s]+/,'').trim()).filter(Boolean).join('; ');
+}
+
+// Terminologia reconhecida pelos convênios (ANS):
+// 20103115 – Atividade reflexa / aplicação de técnica cinesioterápica específica
+// 20103522 – Patologias osteomioarticulares c/ dependência de AVD
+// 50000160 – Atendimento fisioterapêutico ambulatorial c/ disfunção músculo-esquelética
+// NÃO usar: eletroterapia como label, laser, ondas curtas, pilates
+const TRATAMENTO_TEMPLATES = {
+  ombro: {
+    terapiaManual: 'Mobilizações articulares glenoumerais e escapulotorácicas, liberação miofascial do manguito rotador e musculatura periescapular, técnicas de energia muscular e pompage cervical.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, controle do processo inflamatório e melhora da extensibilidade tecidual do complexo do ombro.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: exercícios de ganho de amplitude de movimento, fortalecimento progressivo do manguito rotador e estabilizadores da escápula, treino proprioceptivo e reeducação funcional do membro superior.'
+  },
+  joelho: {
+    terapiaManual: 'Mobilizações articulares femorotibiais e patelofemoral, drenagem linfática manual, liberação miofascial de quadríceps, isquiotibiais e trato iliotibial.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, redução do processo inflamatório e edema, e aceleração da reparação tecidual no joelho.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento de quadríceps e isquiotibiais, treino proprioceptivo e de equilíbrio, estabilização articular e reeducação da marcha.'
+  },
+  coluna_lombar: {
+    terapiaManual: 'Mobilizações vertebrais lombares e sacroilíacas, liberação miofascial paravertebral, técnicas de energia muscular e tração manual segmentar.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia lombar, relaxamento da musculatura paravertebral e controle do processo inflamatório.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: estabilização segmentar lombar, fortalecimento de core, mobilidade vertebral, alongamentos globais e reeducação postural.'
+  },
+  coluna_cervical: {
+    terapiaManual: 'Mobilizações articulares cervicais e cervicotorácicas, liberação miofascial de musculatura suboccipital e paravertebral cervical, técnicas de energia muscular.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia cervical, redução da hipertonia muscular e controle inflamatório segmentar.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento e estabilização cervical profunda, mobilidade articular, controle neuromuscular, propriocepção e reeducação postural cefálica.'
+  },
+  pe_tornozelo: {
+    terapiaManual: 'Mobilizações articulares de tornozelo, médio e antepé, liberação miofascial de musculatura intrínseca e extrínseca do pé, técnicas de descompressão neural.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, controle inflamatório e melhora da circulação local em pé e tornozelo.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento intrínseco do pé, treino proprioceptivo e de equilíbrio, estabilização de tornozelo e reeducação da marcha.'
+  },
+  punho_mao: {
+    terapiaManual: 'Mobilizações articulares radiocarpal, intercárpicas e metacarpofalangianas, liberação do canal do carpo, técnicas neurais e liberação miofascial antebraquial.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, dessensibilização neural e controle do processo inflamatório em punho e mão.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento muscular intrínseco e extrínseco da mão, mobilidade de punho e dedos, destreza manual e treino funcional de preensão.'
+  },
+  cotovelo: {
+    terapiaManual: 'Mobilizações articulares do cotovelo, liberação miofascial de epicôndilos e antebraço, técnicas de energia muscular e descompressão neural.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, resolução do processo inflamatório epicondilar e cicatrização tecidual.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento excêntrico da musculatura epicondilar, mobilidade de cotovelo e punho, propriocepção e progressão funcional.'
+  },
+  quadril: {
+    terapiaManual: 'Mobilizações articulares coxofemorais, liberação miofascial de glúteos, flexores e rotadores do quadril, técnicas de energia muscular e tração.',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, controle inflamatório e melhora da extensibilidade capsular coxofemoral.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento de glúteos e musculatura estabilizadora do quadril, mobilidade coxofemoral, treino proprioceptivo e reeducação da marcha.'
+  },
+  geral: {
+    terapiaManual: 'Mobilizações articulares, liberação miofascial e técnicas de energia muscular adaptadas ao(s) segmento(s) corporal(is) tratado(s).',
+    eletrotermoterapia: 'Recursos eletrotermoterapêuticos para analgesia, controle do processo inflamatório e melhora da condutividade tecidual nos segmentos comprometidos.',
+    cinesioterapia: 'Aplicação de técnicas cinesioterápicas específicas: fortalecimento muscular, estabilização articular, treino proprioceptivo, mobilidade e reeducação funcional do(s) segmento(s) comprometido(s).'
+  }
+};
+
+const ACHADOS_TEMPLATES = {
+  ombro: (patologia, side) => `Restrição da amplitude de movimento ${side ? 'do ' + side : 'do ombro'}; pontos dolorosos à palpação da musculatura do manguito rotador e região periescapular; testes ortopédicos específicos positivos para comprometimento do complexo do ombro; déficit de força muscular em musculatura estabilizadora glenoumeral.`,
+  joelho: (patologia, side) => `Dor à palpação da interlinha articular ${side ? 'do joelho ' + side : 'do joelho'}; restrição da amplitude de movimento em flexão e extensão; testes ortopédicos positivos para comprometimento meniscal e/ou ligamentar; deficit de força em quadríceps e isquiotibiais; alteração do padrão de marcha.`,
+  coluna_lombar: () => `Hipertonia da musculatura paravertebral lombar bilateral; restrição da amplitude de movimento da coluna lombar; presença de pontos dolorosos à palpação segmentar lombossacra; alteração postural com compensações de pelve e tronco; déficit de força muscular em estabilizadores do core.`,
+  coluna_cervical: () => `Hipertonia da musculatura suboccipital e paravertebral cervical; restrição da amplitude de movimento cervical em rotação, flexão e extensão; pontos dolorosos à palpação articular cervical; alteração postural com anteriorização de cabeça e protração escapular.`,
+  pe_tornozelo: (patologia, side) => `Dor à palpação da interlinha articular do tornozelo e antepé ${side ? side : ''}; restrição da amplitude de movimento de tornozelo; presença de pontos dolorosos à palpação plantar e periarticular; alteração do apoio plantar e padrão de marcha; déficit de força intrínseca do pé.`,
+  punho_mao: () => `Dor e parestesia em punho e mão; restrição da amplitude de movimento radiocarpal; testes de Phalen e Tinel positivos quando aplicáveis; redução da força de preensão palmar; pontos dolorosos à palpação do canal do carpo e musculatura antebraquial.`,
+  cotovelo: (patologia, side) => `Dor intensa à palpação do epicôndilo ${side || 'lateral'}; dor à extensão resistida do punho; restrição da amplitude de movimento do cotovelo; redução de força em musculatura epicondilar; possível irradiação para antebraço e punho.`,
+  quadril: (patologia, side) => `Restrição da amplitude de movimento coxofemoral em flexão, rotação interna e abdução; dor à palpação articular e musculatura periarticular do quadril; déficit de força muscular em glúteos e estabilizadores do quadril; alteração do padrão de marcha.`,
+  geral: (patologia, side) => `Ao exame clínico observa-se quadro álgico compatível com ${patologia||'a patologia de base'}; restrição funcional do(s) segmento(s) comprometido(s); presença de pontos dolorosos; déficit de força e amplitude de movimento; comprometimento funcional das atividades de vida diária.`
+};
+
+// ── Detecção de gênero pelo primeiro nome (nomes brasileiros) ──
+function detectGender(fullName) {
+  const first = fullName.split(' ')[0].toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const femininos = [
+    'maria','ana','francisca','clarice','monica','sandra','daniela','juliana',
+    'patricia','fernanda','camila','beatriz','lucia','rosa','silvana','adriana',
+    'eliana','renata','cristina','vanessa','viviane','marcia','carla','paula',
+    'flavia','silvia','luciana','tatiana','priscila','simone','debora','andressa',
+    'sabrina','bruna','larissa','jessica','amanda','natalia','leticia','raquel',
+    'katia','vera','irene','elizabete','sueli','nair','tereza','helena','ines',
+    'alice','marcela','isabela','carolina','mariana','angela','rosilene',
+    'aparecida','miriam','nilza','sonia','edna','neuza','rosangela','rosemary',
+    'evanilda','dalva','marlene','neide','erica','bianca','michelle','nathalia',
+    'aline','claudia','elisa','giovanna','luana','thais','yasmin','lidia',
+    'ivone','cecilia','valentina','sophia','isadora','rebeca','ariane','natasha',
+    'joana','luiza','julia','gabriela','isabelle','lorena','lara','vitoria',
+    'elaine','fabiana','rosana','vivian','edilaine','rosemeire','gislaine',
+    'valeria','solange','celia','ivana','marli','enilda','severiana','regiane',
+    'suenia','suely','gleice','glaucia','nilce','silmara','roseli','edinalva',
+    'zuleica','benedita','socorro','fatima','conceicao','graca','assuncao',
+    'perpetua','mirtes','iracema','neuza','terezinha','cleuza','lindinalva'
+  ];
+  if (femininos.includes(first)) return 'F';
+  // Heurística: termina em 'a' = feminino (ex: Brenda, Pamela), exceto nomes masculinos comuns
+  const excecoes = ['luca','nicola','barnaba','elias','matias','tobias','josias'];
+  if (first.endsWith('a') && !excecoes.includes(first)) return 'F';
+  return 'M';
+}
+
+function buildReportContent(patient, inputName, reportDate, profName, profCrefito) {
+  const q = patient.questions;
+  const queixa = q['1 - QUEIXA PRINCIPAL'] || '';
+  const resumo = q['0 - RESUMO DA PATOLOGIA'] || '';
+  const rawName = patient.rawName;
+
+  // Detecta gênero para artigo correto
+  const genero = detectGender(rawName);
+  const artigo = genero === 'F' ? 'A paciente' : 'O paciente';
+
+  // Normalize patologia text
+  const patologiaRaw = resumo || queixa;
+  const patologiaClean = normalizePatologiaText(patologiaRaw);
+
+  // Detect body area and CID
+  const ba = detectBodyArea(patologiaRaw + ' ' + queixa);
+  const cid = detectCID(patologiaRaw + ' ' + queixa);
+  const side = detectSide(patologiaRaw + ' ' + queixa);
+  const tpl = TRATAMENTO_TEMPLATES[ba.area] || TRATAMENTO_TEMPLATES.geral;
+  const achadosFn = ACHADOS_TEMPLATES[ba.area] || ACHADOS_TEMPLATES.geral;
+
+  // DIAGNÓSTICO
+  const diagTitle = patologiaClean
+    ? patologiaClean.split(';')[0].trim()
+    : 'Síndrome Álgica – ' + titleCase(ba.side);
+  const diagLine = diagTitle + (cid ? ` (CID-10: ${cid})` : '');
+
+  // HISTÓRIA — somente se houver dado real
+  let historia = '';
+  if (queixa) {
+    const q2 = queixa.replace(/^queixa de /i,'').replace(/^paciente /i,'').toLowerCase();
+    historia = `Paciente refere ${q2}`;
+    if (!historia.endsWith('.')) historia += '.';
+    historia += ` O quadro compromete as atividades de vida diária e a capacidade funcional${side ? ' do ' + ba.side + (side !== 'Bilateral' ? ' ' + side.toLowerCase() : ' bilateral') : ''}, com necessidade de acompanhamento fisioterapêutico contínuo.`;
+  } else if (resumo) {
+    historia = `Paciente apresenta quadro clínico compatível com ${patologiaClean}. Refere limitação funcional progressiva e comprometimento das atividades de vida diária, com indicação de tratamento fisioterapêutico.`;
+  }
+  // Se não houver queixa nem resumo, historia fica vazio (seção não é incluída)
+
+  // ACHADOS — sempre gerado a partir da área corporal detectada
+  const achados = achadosFn(diagTitle, side ? side.toLowerCase() : '');
+
+  // EXAMES — somente se a avaliação mencionar exames de imagem
+  const textoCompleto = (queixa + ' ' + resumo).toLowerCase();
+  const temExames = /ressonân|ultrassom|raio.?x|tomograf|radiograf|densitom|eletromio|exame de imagem|imagem evidenci|achados de imagem/.test(
+    textoCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  );
+  const exames = temExames
+    ? `Exames de imagem compatíveis com ${diagTitle.toLowerCase()}${side && side !== 'Bilateral' ? ' no segmento ' + side.toLowerCase() : ''}${side === 'Bilateral' ? ' bilateral' : ''}, corroborando o quadro clínico apresentado e embasando o plano terapêutico em curso.`
+    : '';
+
+  // CONCLUSÃO — artigo correto, nome em negrito, sem frequência
+  const conclusaoTexto = `${artigo} ❬NOME❭ apresenta quadro clínico compatível com ${diagLine}, com comprometimento funcional significativo. Necessita de acompanhamento fisioterapêutico contínuo para controle da dor, restauração da funcionalidade e prevenção de recidivas.`;
+
+  return {
+    rawName, inputName, diagLine, genero, artigo,
+    date: reportDate,
+    historia, achados, exames,
+    conclusaoTexto,  // contém ❬NOME❭ como marcador para negrito no docx
+    terapiaManual: tpl.terapiaManual,
+    eletrotermoterapia: tpl.eletrotermoterapia,
+    cinesioterapia: tpl.cinesioterapia
+  };
+}
+
+// ========== DOCX GENERATION ==========
+// XML structure mirrors exactly the reference .docx files (Clarice/Monica/Samuel layout)
+function makeDocx(r) {
+  const x = xmlEsc;
+
+  // Run properties: Arial, optional bold, optional underline, sz in half-points
+  function rpr(sz, bold, underline) {
+    return `<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/>${bold?'<w:b/><w:bCs/>':''}${underline?'<w:u w:val="single"/>':''}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr>`;
+  }
+  // Text run
+  function run(text, sz, bold, underline) {
+    return `<w:r>${rpr(sz,bold,underline)}<w:t xml:space="preserve">${x(text)}</w:t></w:r>`;
+  }
+  // Empty paragraph with optional border (for separator lines) and optional before/after spacing
+  function emptyP(opts={}) {
+    const sa = opts.sa !== undefined ? opts.sa : 40;
+    const sb = opts.sb !== undefined ? opts.sb : 0;
+    let border = '';
+    if (opts.border) border = `<w:pBdr><w:bottom w:val="single" w:color="${opts.border.color}" w:sz="${opts.border.sz}" w:space="${opts.border.space||4}"/></w:pBdr>`;
+    return `<w:p><w:pPr>${border}<w:spacing w:before="${sb}" w:after="${sa}"/></w:pPr></w:p>`;
+  }
+  // Body-text paragraph: justified, sz=24 (12pt ABNT), regular
+  function bodyP(text, sa=40) {
+    if (!text) return '';
+    return `<w:p><w:pPr><w:spacing w:after="${sa}"/><w:jc w:val="both"/></w:pPr>${run(text,24,false,false)}</w:p>`;
+  }
+  // Body-text paragraph with BOLD name embedded — splits on ❬NOME❭ marker
+  function bodyPWithBoldName(template, name, sa=40) {
+    const parts = template.split('❬NOME❭');
+    const runs = parts.flatMap((part, i) => {
+      const r = part ? run(part, 24, false, false) : '';
+      const bold = (i < parts.length - 1) ? run(name, 24, true, false) : '';
+      return [r, bold];
+    }).join('');
+    return `<w:p><w:pPr><w:spacing w:after="${sa}"/><w:jc w:val="both"/></w:pPr>${runs}</w:p>`;
+  }
+  // Section header paragraph: bold+underline, sz=24, before=80 after=40
+  function secHeader(label) {
+    return `<w:p><w:pPr><w:spacing w:before="80" w:after="40"/></w:pPr>${run(label,24,true,true)}</w:p>`;
+  }
+  // Spacer paragraph between sections: before=80 after=40
+  const spacer = `<w:p><w:pPr><w:spacing w:before="80" w:after="40"/></w:pPr></w:p>`;
+  // Indented dash item for TRATAMENTO: – BoldLabel: regular text, sz=24, left=360
+  function dashItem(label, text) {
+    return `<w:p><w:pPr><w:spacing w:after="30"/><w:ind w:left="360"/><w:jc w:val="both"/></w:pPr>${run('– ',24,false,false)}${run(label+': ',24,true,false)}${run(text,24,false,false)}</w:p>`;
+  }
+
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" mc:Ignorable="w14"><w:body>
+${/* ── 1. TÍTULO RELATÓRIO CLÍNICO ── centered, bold, sz=28, after=200 */''}
+<w:p><w:pPr><w:spacing w:after="200"/><w:jc w:val="center"/></w:pPr>${run('RELATÓRIO CLÍNICO',28,true,false)}</w:p>
+${/* ── 2. Linha preta sob o título ── border sz=6, after=120 */''}
+${emptyP({border:{color:'000000',sz:6,space:4}, sa:120})}
+${/* ── 3. Paciente: NOME em negrito + caixa alta, borda esquerda preta */''}
+<w:p><w:pPr><w:spacing w:after="20"/><w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="000000"/></w:pBdr></w:pPr>${run('Paciente: ',24,true,false)}${run(r.rawName.toUpperCase(),24,true,false)}</w:p>
+${/* ── 4. Data: DD/MM/YYYY ── bold label + regular date, borda esquerda preta, after=80 */''}
+<w:p><w:pPr><w:spacing w:after="80"/><w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="000000"/></w:pBdr></w:pPr>${run('Data: ',24,true,false)}${run(fmtDate(r.date),24,false,false)}</w:p>
+${/* ── 5. Linha cinza separadora ── AAAAAA sz=2, after=80 */''}
+${emptyP({border:{color:'AAAAAA',sz:2,space:2}, sa:80})}
+${/* ── 6. DIAGNÓSTICO CLÍNICO: texto inline ── bold+underline label, regular text */''}
+<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>${run('DIAGNÓSTICO CLÍNICO: ',24,true,true)}${run(r.diagLine,24,false,false)}</w:p>
+${spacer}
+${/* ── 7. HISTÓRIA CLÍNICA E QUADRO ATUAL (somente se houver dado) */''}
+${r.historia ? secHeader('HISTÓRIA CLÍNICA E QUADRO ATUAL') + bodyP(r.historia) + spacer : ''}
+${/* ── 8. ACHADOS CLÍNICOS */''}
+${secHeader('ACHADOS CLÍNICOS')}
+${bodyP(r.achados)}
+${spacer}
+${/* ── 9. EXAMES COMPLEMENTARES (somente se houver menção de exames na avaliação) */''}
+${r.exames ? secHeader('EXAMES COMPLEMENTARES') + bodyP(r.exames) + spacer : ''}
+${/* ── 10. CONCLUSÃO (nome do paciente em negrito) */''}
+${secHeader('CONCLUSÃO')}
+${bodyPWithBoldName(r.conclusaoTexto, r.rawName)}
+${spacer}
+${/* ── 11. TRATAMENTO (3 sub-itens – sem Eletroterapia, sem laser/pilates/ondas curtas) */''}
+${secHeader('TRATAMENTO FISIOTERAPÊUTICO / TÉCNICAS EMPREGADAS DE ACORDO COM O SEGUIMENTO(S) CORPORAL(IS) TRATADO(S)')}
+${dashItem('Terapia Manual', r.terapiaManual)}
+${dashItem('Eletrotermoterapia', r.eletrotermoterapia)}
+${dashItem('Cinesioterapia', r.cinesioterapia)}
+${/* ── 12. Assinatura centralizada ── */''}
+${emptyP({sa:0, sb:600})}
+<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${run('_________________________________',24,false,false)}</w:p>
+<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${run('Fisioterapeuta Responsável',24,false,false)}</w:p>
+${/* ── Configurações de página: A4, margens idênticas às referências */''}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1800" w:bottom="1440" w:left="1800" w:header="708" w:footer="708" w:gutter="0"/><w:cols w:space="720" w:num="1"/><w:docGrid w:linePitch="360" w:charSpace="0"/></w:sectPr>
+</w:body></w:document>`;
+
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
+  const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+  const ct = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`;
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', ct);
+  zip.file('_rels/.rels', rootRels);
+  zip.file('word/document.xml', doc);
+  zip.file('word/_rels/document.xml.rels', rels);
+  return zip.generateAsync({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+// ========== AVULSO ==========
+function toggleAvulso() {
+  const body = document.getElementById('avulsoBody');
+  const icon = document.getElementById('avulsoIcon');
+  body.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+async function gerarAvulso() {
+  const nome = document.getElementById('avulsoNome').value.trim();
+  const patologia = document.getElementById('avulsoPatologia').value.trim();
+  if (!nome) { toast('Informe o nome do paciente.', 'err'); return; }
+  if (!patologia) { toast('Informe a patologia ou queixa.', 'err'); return; }
+
+  // Monta patient sintético com os dados informados
+  const patientSintetico = {
+    rawName: nome,
+    questions: {
+      '1 - QUEIXA PRINCIPAL': patologia,
+      '0 - RESUMO DA PATOLOGIA': patologia
+    },
+    date: null
+  };
+
+  const today = new Date();
+  const reportDate = today.toISOString().split('T')[0];
+
+  try {
+    const content = buildReportContent(patientSintetico, nome, reportDate, '', '');
+    const blob = await makeDocx(content);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome.replace(/\s+/g,'_') + '_relatorio.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Relatório avulso gerado!', 'ok');
+  } catch(e) {
+    toast('Erro ao gerar: ' + e.message, 'err');
+  }
+}
+
+// ========== GENERATE ALL ==========
+async function generateReports() {
+  const namesRaw = document.getElementById('namesArea').value.trim();
+  if (!namesRaw) { toast('Cole os nomes dos pacientes primeiro.', 'err'); return; }
+  if (!Object.keys(excelDB).length) { toast('Carregue a base de avaliações (Excel) primeiro.', 'err'); return; }
+
+  const names = namesRaw.split('\n').map(n => n.trim()).filter(Boolean);
+  if (!names.length) { toast('Nenhum nome encontrado.', 'err'); return; }
+
+  // Always use today's date at moment of generation
+  const today = new Date();
+  const reportDate = today.toISOString().split('T')[0];
+  const profName = '';
+  const profCrefito = '';
+
+  document.getElementById('btnGen').disabled = true;
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+
+  const resultsList = document.getElementById('resultsList');
+  resultsList.innerHTML = '';
+
+  const masterZip = new JSZip();
+  generatedFiles = [];
+  let done = 0;
+  let okCount = 0;
+
+  function setProgress(pct, current, total, status) {
+    const p = Math.round(pct);
+    document.getElementById('progressBar').style.width = p + '%';
+    document.getElementById('gaugeNum').textContent = p + '%';
+    const circ = 201.06;
+    document.getElementById('gaugePath').style.strokeDashoffset = circ - (circ * p / 100);
+    document.getElementById('progCount').textContent = `${current} de ${total} relatórios`;
+    document.getElementById('progStatus').textContent = status;
+  }
+
+  document.getElementById('progTitle').textContent = `Processando ${names.length} paciente(s)...`;
+  setProgress(0, 0, names.length, 'Iniciando...');
+
+  for (let i = 0; i < names.length; i++) {
+    const inputName = names[i];
+    setProgress((i / names.length) * 100, i, names.length, `Buscando: ${inputName}`);
+
+    // Small delay so UI updates
+    await new Promise(res => setTimeout(res, 50));
+
+    const match = findBestMatch(inputName);
+
+    if (!match) {
+      // Error card
+      resultsList.innerHTML += `<div class="result-item" style="animation-delay:${i*0.05}s">
+        <div class="result-badge err">✗</div>
+        <div style="flex:1">
+          <div class="result-name">${inputName}</div>
+          <div class="result-sub">Paciente não encontrado na base (sem correspondência suficiente)</div>
+        </div>
+        <span class="result-tag err">Não encontrado</span>
+      </div>`;
+    } else {
+      try {
+        const reportContent = buildReportContent(match.data, inputName, reportDate, profName, profCrefito);
+        const docxBlob = await makeDocx(reportContent);
+        const safeName = reportContent.rawName.replace(/[^A-Z0-9 ]/gi, '_').replace(/\s+/g,'_').toUpperCase();
+        const fileName = `RELATORIO_${safeName}.docx`;
+        masterZip.file(fileName, docxBlob);
+        generatedFiles.push({ name: fileName, blob: docxBlob });
+        okCount++;
+
+        const similarity = Math.round(match.score * 100);
+        const matchNote = match.data.rawName !== inputName
+          ? `Correspondência: ${match.data.rawName} (${similarity}%)`
+          : `Correspondência exata`;
+
+        resultsList.innerHTML += `<div class="result-item" style="animation-delay:${i*0.05}s">
+          <div class="result-badge ok">✓</div>
+          <div style="flex:1">
+            <div class="result-name">${match.data.rawName}</div>
+            <div class="result-sub">${matchNote} · ${reportContent.diagLine}</div>
+          </div>
+          <span class="result-tag ok">OK</span>
+        </div>`;
+      } catch(err) {
+        resultsList.innerHTML += `<div class="result-item" style="animation-delay:${i*0.05}s">
+          <div class="result-badge err">!</div>
+          <div style="flex:1">
+            <div class="result-name">${inputName}</div>
+            <div class="result-sub">Erro ao gerar relatório: ${err.message}</div>
+          </div>
+          <span class="result-tag err">Erro</span>
+        </div>`;
+      }
+    }
+    done++;
+  }
+
+  setProgress(100, done, names.length, `Concluído! ${okCount} relatório(s) gerado(s).`);
+  document.getElementById('progTitle').textContent = `✓ ${okCount} relatório(s) gerado(s)`;
+
+  // Generate zip
+  if (okCount > 0) {
+    generatedZip = await masterZip.generateAsync({ type: 'blob' });
+    document.getElementById('btnDownload').disabled = false;
+    toast(`${okCount} relatório(s) pronto(s) para download!`, 'ok');
+  } else {
+    toast('Nenhum relatório gerado. Verifique os nomes.', 'err');
+  }
+
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('btnGen').disabled = false;
+}
+
+// ========== DOWNLOAD ==========
+function downloadZip() {
+  if (!generatedZip) { toast('Nenhum arquivo gerado.', 'err'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(generatedZip);
+  a.download = 'relatorios_clinicos.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Download iniciado!', 'ok');
+}
+</script>
+</body>
+</html>

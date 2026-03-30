@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Proposta — Relatório Clínico</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#bbb;padding:30px 20px 50px;font-family:Arial,sans-serif}
+.badge{max-width:794px;margin:0 auto 14px;font-size:11px;color:#444;font-family:Arial,sans-serif}
+
+/* FOLHA A4 — margens ABNT */
+.page{
+  width:794px;margin:0 auto;
+  background:#fff;
+  box-shadow:0 4px 20px rgba(0,0,0,0.3);
+  padding:113px 113px 113px 142px;
+  min-height:1123px;
+  display:flex;flex-direction:column;
+  font-family:Arial,Helvetica,sans-serif;
+  font-size:12pt;
+  color:#000;
+  line-height:1.5;
+}
+
+/* ── TÍTULO ── */
+.title{
+  text-align:center;
+  font-size:14pt;
+  font-weight:bold;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  margin-bottom:22px;
+}
+
+/* Barra decorativa sob o título — fina, imprime bem */
+.title-bar{
+  display:flex;
+  align-items:center;
+  margin-bottom:12px;
+  gap:0;
+}
+.title-bar-main{flex:1;height:2px;background:#000}
+.title-bar-accent{width:32px;height:2px;background:#000}
+
+/* ── CABEÇALHO DO PACIENTE ── */
+.patient-band{
+  border-left:4px solid #000;
+  padding:6px 10px;
+  margin-bottom:12px;
+}
+.patient-name{
+  font-size:12pt;font-weight:bold;
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+}
+.patient-meta{font-size:11pt;color:#333;margin-top:2px}
+
+/* Separador */
+hr.sep{border:none;border-top:1px solid #999;margin:10px 0 14px}
+
+/* ── SEÇÕES ── */
+.sec-label{
+  font-weight:bold;
+  text-decoration:underline;
+  text-transform:uppercase;
+  font-size:12pt;
+  margin:12px 0 3px;
+  display:block;
+}
+.sec-label.inline{display:inline;margin:0}
+
+.inline-row{margin-bottom:10px;font-size:12pt;text-align:justify}
+.body-text{font-size:12pt;text-align:justify;margin-bottom:2px}
+
+/* ── SUB-ITENS TRATAMENTO ── */
+.sub{margin-left:20px;margin-bottom:3px;font-size:12pt;text-align:justify}
+.sub-lbl{font-weight:bold;text-decoration:underline}
+
+/* ── ASSINATURA ── */
+.sig{margin-top:auto;padding-top:80px;text-align:center;font-size:12pt}
+
+/* ── PRINT ── */
+@media print{
+  body{background:#fff;padding:0}
+  .badge{display:none}
+  .page{
+    box-shadow:none;
+    width:100%;
+    padding:3cm 3cm 3cm 4cm;
+    min-height:unset;
+  }
+  .patient-band{border-left:4px solid #000}
+}
+</style>
+</head>
+<body>
+
+<div class="badge">Proposta — fonte 12pt ABNT · print-ready (Ctrl+P para imprimir)</div>
+
+<div class="page">
+
+  <div class="title">Relatório Clínico</div>
+  <div class="title-bar">
+    <div class="title-bar-main"></div>
+    <div class="title-bar-accent"></div>
+  </div>
+
+  <div class="patient-band">
+    <div class="patient-name"><span style="font-weight:normal">Paciente: </span>FRANCISCA APARECIDA DA SILVA</div>
+    <div class="patient-meta"><strong>Data:</strong> 27/03/2026</div>
+  </div>
+
+  <hr class="sep">
+
+  <div class="inline-row">
+    <span class="sec-label inline">Diagnóstico Clínico:</span>
+    &nbsp;Tendinopatia do Manguito Rotador — CID-10: M75.1
+  </div>
+
+  <span class="sec-label">História Clínica e Quadro Atual</span>
+  <div class="body-text">A paciente <strong>Francisca Aparecida da Silva</strong> apresenta dor no ombro direito com irradiação para o membro superior, início há quatro meses, com limitação progressiva para elevação e rotação do braço. Nega trauma ou cirurgia prévia.</div>
+
+  <span class="sec-label">Achados Clínicos</span>
+  <div class="body-text">Redução da amplitude de movimento ativo e passivo do ombro direito. Testes de Neer e Hawkins-Kennedy positivos. Força reduzida para abdução e rotação interna. Espasmo da musculatura periscapular.</div>
+
+  <span class="sec-label">Exames Complementares</span>
+  <div class="body-text">Ressonância magnética evidencia tendinopatia do supraespinal com degeneração intratendinosa. Ultrassonografia confirma espessamento tendíneo e bursite subacromial associada.</div>
+
+  <span class="sec-label">Conclusão</span>
+  <div class="body-text">A paciente <strong>Francisca Aparecida da Silva</strong> apresenta quadro compatível com tendinopatia do manguito rotador direito com comprometimento funcional. Encontra-se em acompanhamento fisioterapêutico com evolução favorável.</div>
+
+  <span class="sec-label">Tratamento Fisioterapêutico / Técnicas Empregadas</span>
+  <div class="sub"><span class="sub-lbl">Terapia Manual:</span> Mobilização articular, liberação miofascial e stretching dos rotadores do ombro.</div>
+  <div class="sub"><span class="sub-lbl">Eletrotermoterapia:</span> Recursos eletrotermoterapêuticos para controle álgico e inflamatório.</div>
+  <div class="sub"><span class="sub-lbl">Cinesioterapia:</span> Fortalecimento do manguito rotador, treino proprioceptivo e reeducação do movimento glenoumeral.</div>
+
+  <div class="sig">
+    _________________________________<br>
+    Fisioterapeuta Responsável
+  </div>
+
+</div>
+
+</body>
+</html>
