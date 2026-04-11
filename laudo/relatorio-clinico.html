@@ -1112,5 +1112,32 @@ function downloadZip() {
   toast('Download iniciado!', 'ok');
 }
 </script>
+
+<script>
+// ========== ACCESS GUARD ==========
+// Verifica a cada 15s se o acesso ainda está liberado.
+// Se o servidor retornar a página de bloqueio, recarrega automaticamente.
+(function accessGuard() {
+  var CHECK_INTERVAL = 15000;
+  var BLOCKED_MARKER = 'Acesso Negado';
+
+  function check() {
+    fetch(location.href, { cache: 'no-store', method: 'GET' })
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        if (html.indexOf(BLOCKED_MARKER) !== -1) {
+          location.reload();
+        } else {
+          setTimeout(check, CHECK_INTERVAL);
+        }
+      })
+      .catch(function() {
+        setTimeout(check, CHECK_INTERVAL);
+      });
+  }
+
+  setTimeout(check, CHECK_INTERVAL);
+})();
+</script>
 </body>
 </html>
