@@ -150,19 +150,12 @@ textarea::placeholder,input::placeholder{color:var(--text3)}
   border:1px solid var(--border);
   padding:20px 24px;
 }
-.avulso-toggle{
-  display:flex;align-items:center;justify-content:space-between;
-  cursor:pointer;user-select:none;
-}
-.avulso-toggle-label{
+.avulso-header{
   display:flex;align-items:center;gap:10px;
   font-size:12px;font-weight:700;text-transform:uppercase;
   letter-spacing:0.12em;color:var(--accent);
+  margin-bottom:16px;
 }
-.avulso-toggle-icon{font-size:18px;transition:transform 0.3s}
-.avulso-toggle-icon.open{transform:rotate(180deg)}
-.avulso-body{display:none;margin-top:16px}
-.avulso-body.open{display:block}
 .avulso-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 @media(max-width:680px){.avulso-grid{grid-template-columns:1fr}}
 .avulso-label{display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase}
@@ -359,25 +352,20 @@ footer{padding:24px 0;text-align:center;font-size:11px;color:var(--text3)}
   <!-- AVULSO -->
   <div class="avulso-card">
     <div class="avulso-inner">
-      <div class="avulso-toggle" onclick="toggleAvulso()">
-        <div class="avulso-toggle-label">
-          <span>✦</span> Relatório Avulso — sem planilha
-        </div>
-        <span class="avulso-toggle-icon" id="avulsoIcon">▾</span>
+      <div class="avulso-header">
+        <span>✦</span> Relatório Avulso — sem planilha
       </div>
-      <div class="avulso-body" id="avulsoBody" onclick="event.stopPropagation()">
-        <div class="avulso-grid">
-          <div>
-            <label class="avulso-label">Nome do Paciente</label>
-            <input type="text" id="avulsoNome" placeholder="Ex: Daniel Lopes Marques de Souza">
-          </div>
-          <div>
-            <label class="avulso-label">Patologia / Queixa</label>
-            <input type="text" id="avulsoPatologia" placeholder="Ex: Dor em punho direito">
-          </div>
+      <div class="avulso-grid">
+        <div>
+          <label class="avulso-label">Nome do Paciente</label>
+          <input type="text" id="avulsoNome" placeholder="Ex: Daniel Lopes Marques de Souza">
         </div>
-        <button class="btn-avulso" onclick="event.stopPropagation(); gerarAvulso()">Gerar Relatório Avulso →</button>
+        <div>
+          <label class="avulso-label">Patologia / Queixa</label>
+          <input type="text" id="avulsoPatologia" placeholder="Ex: Dor em punho direito">
+        </div>
       </div>
+      <button class="btn-avulso" onclick="gerarAvulso()">Gerar Relatório Avulso →</button>
     </div>
   </div>
 
@@ -948,15 +936,6 @@ ${/* ── Configurações de página: A4, margens idênticas às referências 
 }
 
 // ========== AVULSO ==========
-function toggleAvulso() {
-  const body = document.getElementById('avulsoBody');
-  const icon = document.getElementById('avulsoIcon');
-  body.classList.toggle('open');
-  icon.classList.toggle('open');
-  // Persiste estado do painel
-  try { localStorage.setItem('avulso_open', body.classList.contains('open') ? '1' : '0'); } catch(e){}
-}
-
 function saveAvulsoFields() {
   try {
     localStorage.setItem('avulso_nome', document.getElementById('avulsoNome').value);
@@ -964,22 +943,14 @@ function saveAvulsoFields() {
   } catch(e) {}
 }
 
-function restoreAvulsoState() {
+document.addEventListener('DOMContentLoaded', function() {
+  // Restaura campos digitados após qualquer reload
   try {
     const nome = localStorage.getItem('avulso_nome');
     const patologia = localStorage.getItem('avulso_patologia');
-    const open = localStorage.getItem('avulso_open');
     if (nome) document.getElementById('avulsoNome').value = nome;
     if (patologia) document.getElementById('avulsoPatologia').value = patologia;
-    if (open === '1') {
-      document.getElementById('avulsoBody').classList.add('open');
-      document.getElementById('avulsoIcon').classList.add('open');
-    }
   } catch(e) {}
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  restoreAvulsoState();
   document.getElementById('avulsoNome').addEventListener('input', saveAvulsoFields);
   document.getElementById('avulsoPatologia').addEventListener('input', saveAvulsoFields);
 });
