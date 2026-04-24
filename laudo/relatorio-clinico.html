@@ -365,7 +365,7 @@ footer{padding:24px 0;text-align:center;font-size:11px;color:var(--text3)}
         </div>
         <span class="avulso-toggle-icon" id="avulsoIcon">▾</span>
       </div>
-      <div class="avulso-body" id="avulsoBody">
+      <div class="avulso-body" id="avulsoBody" onclick="event.stopPropagation()">
         <div class="avulso-grid">
           <div>
             <label class="avulso-label">Nome do Paciente</label>
@@ -376,7 +376,7 @@ footer{padding:24px 0;text-align:center;font-size:11px;color:var(--text3)}
             <input type="text" id="avulsoPatologia" placeholder="Ex: Dor em punho direito">
           </div>
         </div>
-        <button class="btn-avulso" onclick="gerarAvulso()">Gerar Relatório Avulso →</button>
+        <button class="btn-avulso" onclick="event.stopPropagation(); gerarAvulso()">Gerar Relatório Avulso →</button>
       </div>
     </div>
   </div>
@@ -953,7 +953,36 @@ function toggleAvulso() {
   const icon = document.getElementById('avulsoIcon');
   body.classList.toggle('open');
   icon.classList.toggle('open');
+  // Persiste estado do painel
+  try { localStorage.setItem('avulso_open', body.classList.contains('open') ? '1' : '0'); } catch(e){}
 }
+
+function saveAvulsoFields() {
+  try {
+    localStorage.setItem('avulso_nome', document.getElementById('avulsoNome').value);
+    localStorage.setItem('avulso_patologia', document.getElementById('avulsoPatologia').value);
+  } catch(e) {}
+}
+
+function restoreAvulsoState() {
+  try {
+    const nome = localStorage.getItem('avulso_nome');
+    const patologia = localStorage.getItem('avulso_patologia');
+    const open = localStorage.getItem('avulso_open');
+    if (nome) document.getElementById('avulsoNome').value = nome;
+    if (patologia) document.getElementById('avulsoPatologia').value = patologia;
+    if (open === '1') {
+      document.getElementById('avulsoBody').classList.add('open');
+      document.getElementById('avulsoIcon').classList.add('open');
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  restoreAvulsoState();
+  document.getElementById('avulsoNome').addEventListener('input', saveAvulsoFields);
+  document.getElementById('avulsoPatologia').addEventListener('input', saveAvulsoFields);
+});
 
 async function gerarAvulso() {
   const nome = document.getElementById('avulsoNome').value.trim();
@@ -984,6 +1013,11 @@ async function gerarAvulso() {
     a.click();
     URL.revokeObjectURL(url);
     toast('Relatório avulso gerado!', 'ok');
+    // Limpa campos e estado após gerar
+    try {
+      localStorage.removeItem('avulso_nome');
+      localStorage.removeItem('avulso_patologia');
+    } catch(e) {}
   } catch(e) {
     toast('Erro ao gerar: ' + e.message, 'err');
   }
